@@ -1,0 +1,35 @@
+       _             _
+ _   _| |_ __ _  ___| |_
+| | | | __/ _` |/ _ \ __|
+| |_| | || (_| |  __/ |_
+ \__, |\__\__, |\___|\__|
+ |___/v1.0|___/by slowbro
+--------------------------
+- Gets youtube videos
+- Quality Selector (use number, based on: http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs)
+- Herpaderp
+
+Requirements
+-------------
+- bash shell (or similar)
+- a Youtube Link
+- ffmpeg
+
+Arguments
+----------
+-i <url>  : input link. Use whole link IN QUOTES (eg "http://www.youtube.com/watch?v=U7mPqycQ0tQ" [gee gee gee gee baby baby baby])
+-o <file> : output file. Extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi etc...)
+-q <#>    : quality number. default is 18
+-Q        : be quiet (no output except for errors)
+
+Examples
+---------
+./ytget -o some_audio.mp3 -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q34
+./ytget -o /path/to/some_audio.mp3 -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q5 -Q
+
+Return Codes
+-------------
+0 : success
+1 : youtube page get failed (did you supply the whole URL? in quotes?)
+2 : youtube video get failed
+3 : ffmpeg encode failed

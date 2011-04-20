@@ -1,0 +1,86 @@
+#!/bin/bash
+QUIET=0
+IN=""
+OUT=""
+QUAL="18"
+while getopts "i:o:q:Q" optname
+  do
+    case "$optname" in
+      "Q")
+        QUIET=1
+        ;;
+      "q")
+        QUAL=$OPTARG
+        ;;
+      "i")
+        IN=$OPTARG
+        ;;
+      "o")
+        OUT=$OPTARG
+        ;;
+      "?")
+        exit;
+        ;;
+      ":")
+        echo "Missing required parameter for $optname"
+        exit
+        ;;
+      *)
+        echo "Unknown error while processing options"
+        exit;
+        ;;
+    esac
+  done
+
+if [[ "$QUIET" == "1" ]]; then
+    wget -O ytout "$IN" >/dev/null 2>&1
+else
+    echo "Get Page..."
+    wget -O ytout "$IN"
+fi
+
+if [[ "$?" != "0" ]]; then
+    echo "page wget failed"
+    exit 1
+fi
+
+FMTS=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g' | grep fmt_url | sed 's/,/\n/g' | sed 's/fmt_url_map=//g'`
+URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2`
+
+if [[ "$URL" == "" ]]; then
+    #fall back to 18
+    if [[ "$QUIET" == "0" ]]; then
+        echo "Quality $QUAL not available- using 18"
+    fi
+    QUAL=18
+    URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2`
+fi
+
+if [[ "$URL" == "" ]]; then
+    #fall back to 5
+    if [[ "$QUIET" == "0" ]]; then
+        echo "Quality $QUAL not available- using 5"
+    fi
+    QUAL=5
+    URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2`
+fi
+
+if [[ "$QUIET" == "1" ]]; then
+    wget -O ytout.media "$URL" >/dev/null 2>&1
+else
+    echo "Get Video..."
+    wget -O ytout.media "$URL"
+fi
+
+if [[ "$?" != "0" ]]; then
+    echo "video wget failed"
+    exit 2
+fi
+
+if [[ "$QUIET" == "1" ]]; then
+    ffmpeg -y -i ytout.media $OUT >/dev/null 2>&1
+else
+    echo "Encode..."
+    ffmpeg -y -i ytout.media $OUT
+    echo "Done!"
+fi
