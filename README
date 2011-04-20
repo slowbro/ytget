@@ -33,3 +33,4 @@ Return Codes
 1 : youtube page get failed (did you supply the whole URL? in quotes?)
 2 : youtube video get failed
 3 : ffmpeg encode failed
+4 : argument error

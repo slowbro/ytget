@@ -1,9 +1,23 @@
 #!/bin/bash
+usage()
+{
+cat << EOF
+usage: $0 options
+
+OPTIONS:
+   -h      Show this message
+   -i      Input URL
+   -o      Output file
+   -q      Set quality #
+   -Q      Be Silent
+EOF
+}
+
 QUIET=0
-IN=""
-OUT=""
+IN=
+OUT=
 QUAL="18"
-while getopts "i:o:q:Q" optname
+while getopts "hi:o:q:Q" optname
   do
     case "$optname" in
       "Q")
@@ -18,19 +32,32 @@ while getopts "i:o:q:Q" optname
       "o")
         OUT=$OPTARG
         ;;
+      "h")
+        usage
+        exit 0
+        ;;
       "?")
-        exit;
+        usage
+        exit 4
         ;;
       ":")
         echo "Missing required parameter for $optname"
-        exit
+        usage
+        exit 4
         ;;
       *)
         echo "Unknown error while processing options"
+        usage
         exit;
         ;;
     esac
   done
+
+if [[ -z "$OUT" ]] || [[ -z "$IN" ]]; then
+    echo "Missing required parameter for in/out."
+    usage
+    exit 4
+fi
 
 if [[ "$QUIET" == "1" ]]; then
     wget -O ytout "$IN" >/dev/null 2>&1
@@ -84,3 +111,6 @@ else
     ffmpeg -y -i ytout.media $OUT
     echo "Done!"
 fi
+
+# cleanup
+rm ytout ytout.media
