@@ -9,16 +9,18 @@ usage: $0 <ilo> [hqQ]
    -o <file>    Output file
    -q <num>     Set quality #
    -Q           Be silent
+   -R <bits>    Audio Bitrate (ex: 128k)
 EOF
 }
 
 QUIET=0
 SHH=0
 LIST=0
+BR="64k"
 IN=
 OUT=
 QUAL="18"
-while getopts "hi:l:o:q:Q" optname
+while getopts "hi:l:o:q:QR:" optname
   do
     case "$optname" in
       "Q")
@@ -26,6 +28,9 @@ while getopts "hi:l:o:q:Q" optname
         ;;
       "q")
         QUAL=$OPTARG
+        ;;
+      "R")
+        BR=$OPTARG
         ;;
       "l")
         LIST=1
@@ -158,10 +163,10 @@ fi
 # encode
 #########
 if [[ "$QUIET" == "1" ]]; then
-    ffmpeg -y -i ytout.media $OUT >/dev/null 2>&1
+    ffmpeg -y -ab $BR -i ytout.media $OUT >/dev/null 2>&1
 else
     echo "Encode..."
-    ffmpeg -y -i ytout.media $OUT
+    ffmpeg -y -ab $BR -i ytout.media $OUT
     echo "Done!"
 fi
 
