@@ -2,22 +2,22 @@
 usage()
 {
 cat << EOF
-usage: $0 options
-
-OPTIONS:
-   -h      Show this message
-   -i      Input URL
-   -o      Output file
-   -q      Set quality #
-   -Q      Be Silent
+usage: $0 <ilo> [hqQ]
+   -h           Show this message
+   -i <url>     Input URL
+   -l <url>     List available quality numbers for <url>
+   -o <file>    Output file
+   -q <num>     Set quality #
+   -Q           Be silent
 EOF
 }
 
 QUIET=0
+LIST=0
 IN=
 OUT=
 QUAL="18"
-while getopts "hi:o:q:Q" optname
+while getopts "hi:l:o:q:Q" optname
   do
     case "$optname" in
       "Q")
@@ -25,6 +25,11 @@ while getopts "hi:o:q:Q" optname
         ;;
       "q")
         QUAL=$OPTARG
+        ;;
+      "l")
+        LIST=1
+        IN=$OPTARG
+        QUIET=1
         ;;
       "i")
         IN=$OPTARG
@@ -53,12 +58,32 @@ while getopts "hi:o:q:Q" optname
     esac
   done
 
+
+# check input
+##############
 if [[ -z "$OUT" ]] || [[ -z "$IN" ]]; then
-    echo "Missing required parameter for in/out."
-    usage
-    exit 4
+    if [[ "$LIST" == "0" ]]; then
+        echo "Missing required parameter for in/out."
+        usage
+        exit 4
+    fi
 fi
 
+
+# check ext if we're not listing
+#################################
+if [[ "$LIST" == "0" ]]; then
+    EXT=`echo $OUT | awk -F . {'print $NF'}`
+    ffmpeg -formats 2>/dev/null | grep "^ .E.*" | grep "$EXT" >/dev/null
+    if [[ "$?" != "0" ]]; then
+        echo "ffmpeg error: encoding to $EXT not supported"
+        exit 5
+    fi
+fi
+
+
+# get youtube page (html)
+##########################
 if [[ "$QUIET" == "1" ]]; then
     wget -O ytout "$IN" >/dev/null 2>&1
 else
@@ -71,9 +96,27 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 
-FMTS=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g' | grep fmt_url | sed 's/,/\n/g' | sed 's/fmt_url_map=//g'`
-URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2`
 
+# get the formats
+##################
+FMTS=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g' | grep fmt_url | sed 's/,/\n/g' | sed 's/fmt_url_map=//g'`
+
+
+# list formats (if selected)
+#############################
+if [[ "$LIST" == "1" ]]; then
+    echo -en "Available fomat codes for $IN:\n   "
+    for i in `echo "$FMTS"`; do
+        echo -en "`echo $i | cut -d'|' -f1`   "
+    done
+    echo ""
+    exit 0;
+fi
+
+
+# get url
+##########
+URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2`
 if [[ "$URL" == "" ]]; then
     #fall back to 18
     if [[ "$QUIET" == "0" ]]; then
@@ -92,6 +135,9 @@ if [[ "$URL" == "" ]]; then
     URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2`
 fi
 
+
+# get media file
+#################
 if [[ "$QUIET" == "1" ]]; then
     wget -O ytout.media "$URL" >/dev/null 2>&1
 else
@@ -101,9 +147,13 @@ fi
 
 if [[ "$?" != "0" ]]; then
     echo "video wget failed"
+    rm ytout
     exit 2
 fi
 
+
+# encode
+#########
 if [[ "$QUIET" == "1" ]]; then
     ffmpeg -y -i ytout.media $OUT >/dev/null 2>&1
 else
@@ -113,4 +163,5 @@ else
 fi
 
 # cleanup
+##########
 rm ytout ytout.media

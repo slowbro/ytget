@@ -3,7 +3,7 @@
 | | | | __/ _` |/ _ \ __|
 | |_| | || (_| |  __/ |_
  \__, |\__\__, |\___|\__|
- |___/v1.0|___/by slowbro
+ |___/v1.1|___/by slowbro
 --------------------------
 - Gets youtube videos
 - Quality Selector (use number, based on: http://en.wikipedia.org/wiki/YouTube#Quality_and_codecs)
@@ -17,15 +17,23 @@ Requirements
 
 Arguments
 ----------
--i <url>  : input link. Use whole link IN QUOTES (eg "http://www.youtube.com/watch?v=U7mPqycQ0tQ" [gee gee gee gee baby baby baby])
--o <file> : output file. Extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi etc...)
--q <#>    : quality number. default is 18
--Q        : be quiet (no output except for errors)
+-h          : help
+-i "<url>"  : input link. use whole link IN QUOTES (eg "http://www.youtube.com/watch?v=U7mPqycQ0tQ" [gee gee gee gee baby baby baby])
+-l "<url>"  : list qualities available for <url>
+-o <file>   : output file. extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi .wmv .oog etc...)
+-q <num>    : quality number. default is 18 (360p)
+-Q          : be quiet (no output except for errors)
 
 Examples
 ---------
-./ytget -o some_audio.mp3 -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q34
-./ytget -o /path/to/some_audio.mp3 -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q5 -Q
+- Get quality 34 ("high quality"/480p) audio
+    ./ytget -o some_audio.mp3 -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q34
+
+- Get quality 5 ("low quality"/240p) video, and suppress output
+    ./ytget -o /path/to/some_video.avi -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q5 -Q
+
+- List qualities available
+    ./ytget -l "http://www.youtube.com/watch?v=U7mPqycQ0tQ"
 
 Return Codes
 -------------
@@ -34,3 +42,4 @@ Return Codes
 2 : youtube video get failed
 3 : ffmpeg encode failed
 4 : argument error
+5 : ffmpeg codec error (codec not available)
