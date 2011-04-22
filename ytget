@@ -13,6 +13,7 @@ EOF
 }
 
 QUIET=0
+SHH=0
 LIST=0
 IN=
 OUT=
@@ -29,7 +30,7 @@ while getopts "hi:l:o:q:Q" optname
       "l")
         LIST=1
         IN=$OPTARG
-        QUIET=1
+        SHH=1
         ;;
       "i")
         IN=$OPTARG
@@ -84,7 +85,7 @@ fi
 
 # get youtube page (html)
 ##########################
-if [[ "$QUIET" == "1" ]]; then
+if [[ "$QUIET" == "1" ]] || [[ "$SHH" == "1" ]]; then
     wget -O ytout "$IN" >/dev/null 2>&1
 else
     echo "Get Page..."
@@ -105,9 +106,11 @@ FMTS=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' 
 # list formats (if selected)
 #############################
 if [[ "$LIST" == "1" ]]; then
-    echo -en "Available fomat codes for $IN:\n   "
+    if [[ "$QUIET" == "0" ]]; then
+        echo -en "Available fomat codes for $IN:\n   "
+    fi
     for i in `echo "$FMTS"`; do
-        echo -en "`echo $i | cut -d'|' -f1`   "
+        echo -en "`echo $i | cut -d'|' -f1` "
     done
     echo ""
     exit 0;
