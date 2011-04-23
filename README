@@ -17,13 +17,15 @@ Requirements
 
 Arguments
 ----------
+-f "<args>" : pass args directly to ffmpeg
 -h          : help
 -i "<url>"  : input link. use whole link IN QUOTES (eg "http://www.youtube.com/watch?v=U7mPqycQ0tQ" [gee gee gee gee baby baby baby])
 -l "<url>"  : list qualities available for <url>
 -o <file>   : output file. extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi .wmv .oog etc...)
 -q <num>    : quality number. default is 18 (360p)
 -Q          : be quiet (no output except for errors)
--R <bit/s>  : pass audio bitrate to ffmpeg (ex: 64k, 128k [def: 64k])
+-r <bit/s>  : pass video bitrate to ffmpeg (ex: 600k, 1200k [defL 96k])
+-R <bit/s>  : pass audio bitrate to ffmpeg (ex: 64k, 128k [def: 96k])
 
 Examples
 ---------

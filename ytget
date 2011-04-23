@@ -2,25 +2,29 @@
 usage()
 {
 cat << EOF
-usage: $0 <ilo> [hqQ]
+usage: $0 <ilo> [fhqQrR]
+   -f "<args>"  Pass args directly to ffmpeg. surround in quotes!
    -h           Show this message
    -i <url>     Input URL
    -l <url>     List available quality numbers for <url>
    -o <file>    Output file
    -q <num>     Set quality #
    -Q           Be silent
-   -R <bits>    Audio Bitrate (ex: 128k)
+   -r <bit/s>   Video bitrate (ex: 1200k, default is same as input)
+   -R <bit/s>   Audio bitrate (ex: 64k, default 128k)
 EOF
 }
 
 QUIET=0
 SHH=0
 LIST=0
-BR="64k"
+ABR="128k"
+VBR="sameq"
+PASS=
 IN=
 OUT=
 QUAL="18"
-while getopts "hi:l:o:q:QR:" optname
+while getopts "f:hi:l:o:q:Qr:R:" optname
   do
     case "$optname" in
       "Q")
@@ -29,8 +33,11 @@ while getopts "hi:l:o:q:QR:" optname
       "q")
         QUAL=$OPTARG
         ;;
+      "r")
+        VBR=$OPTARG
+        ;;
       "R")
-        BR=$OPTARG
+        ABR=$OPTARG
         ;;
       "l")
         LIST=1
@@ -42,6 +49,9 @@ while getopts "hi:l:o:q:QR:" optname
         ;;
       "o")
         OUT=$OPTARG
+        ;;
+      "f")
+        PASS=$OPTARG
         ;;
       "h")
         usage
@@ -65,6 +75,9 @@ while getopts "hi:l:o:q:QR:" optname
   done
 
 
+UA="'Mozilla/5.0 (X11; Linux x86_64; rv:2.2a1pre) Gecko/20110324 Firefox/4.2a1pre'"
+
+
 # check input
 ##############
 if [[ -z "$OUT" ]] || [[ -z "$IN" ]]; then
@@ -80,10 +93,12 @@ fi
 #################################
 if [[ "$LIST" == "0" ]]; then
     EXT=`echo $OUT | awk -F . {'print $NF'}`
-    ffmpeg -formats 2>/dev/null | grep "^ .E.*" | grep "$EXT" >/dev/null
-    if [[ "$?" != "0" ]]; then
+    ffmpeg -y /tmp/test.$EXT 2>&1 | grep "Unable to find">/dev/null
+    if [[ "$?" != "1" ]]; then
         echo "ffmpeg error: encoding to $EXT not supported"
         exit 5
+    else
+        rm /tmp/test.$EXT
     fi
 fi
 
@@ -91,10 +106,10 @@ fi
 # get youtube page (html)
 ##########################
 if [[ "$QUIET" == "1" ]] || [[ "$SHH" == "1" ]]; then
-    wget -O ytout "$IN" >/dev/null 2>&1
+    curl --user-agent "$UA" "$IN" >ytout 2>/dev/null
 else
     echo "Get Page..."
-    wget -O ytout "$IN"
+    curl --user-agent "$UA" "$IN" >ytout
 fi
 
 if [[ "$?" != "0" ]]; then
@@ -147,10 +162,10 @@ fi
 # get media file
 #################
 if [[ "$QUIET" == "1" ]]; then
-    wget -O ytout.media "$URL" >/dev/null 2>&1
+    curl --user-agent "$UA" "$URL" >ytout.media 2>/dev/null
 else
     echo "Get Video..."
-    wget -O ytout.media "$URL"
+    curl --user-agent "$UA" "$URL" >ytout.media
 fi
 
 if [[ "$?" != "0" ]]; then
@@ -162,11 +177,16 @@ fi
 
 # encode
 #########
+if [[ "$VBR" == "sameq" ]];then
+    VBR="-$VBR"
+else
+    VBR="-b $VBR"
+fi
 if [[ "$QUIET" == "1" ]]; then
-    ffmpeg -y -ab $BR -i ytout.media $OUT >/dev/null 2>&1
+    ffmpeg -y -ab $ABR $VBR $PASS -i ytout.media $OUT >/dev/null 2>&1
 else
     echo "Encode..."
-    ffmpeg -y -ab $BR -i ytout.media $OUT
+    ffmpeg -y -ab $ABR $VBR $PASS -i ytout.media $OUT
     echo "Done!"
 fi
 
