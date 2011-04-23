@@ -106,10 +106,10 @@ fi
 # get youtube page (html)
 ##########################
 if [[ "$QUIET" == "1" ]] || [[ "$SHH" == "1" ]]; then
-    curl --user-agent "$UA" "$IN" >ytout 2>/dev/null
+    curl --user-agent "$UA" -o ytout "$IN" >/dev/null 2>&1
 else
     echo "Get Page..."
-    curl --user-agent "$UA" "$IN" >ytout
+    curl --user-agent "$UA" -o ytout "$IN"
 fi
 
 if [[ "$?" != "0" ]]; then
@@ -162,10 +162,10 @@ fi
 # get media file
 #################
 if [[ "$QUIET" == "1" ]]; then
-    curl --user-agent "$UA" "$URL" >ytout.media 2>/dev/null
+    curl --user-agent "$UA" -o ytout.media -L "$URL" >/dev/null 2>&1
 else
     echo "Get Video..."
-    curl --user-agent "$UA" "$URL" >ytout.media
+    curl --user-agent "$UA" -o ytout.media -L "$URL"
 fi
 
 if [[ "$?" != "0" ]]; then
