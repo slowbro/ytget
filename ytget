@@ -237,3 +237,4 @@ fi
 # cleanup
 ##########
 rm ytout ytout.media 2>/dev/null
+exit 0
