@@ -2,20 +2,24 @@
 usage()
 {
 cat << EOF
-usage: $0 <ilo> [fhqQrR]
+usage: $0 <diIo> [fhnqQrR]
+   -d <url>     Show video details for <url> and exit
    -f "<args>"  Pass args directly to ffmpeg. surround in quotes!
    -h           Show this message
    -i <url>     Input URL
-   -l <url>     List available quality numbers for <url>
+   -I <path>    Input file
+   -n           Don't encode: just output the raw youtube video
    -o <file>    Output file
    -q <num>     Set quality #
    -Q           Be silent
    -r <bit/s>   Video bitrate (ex: 1200k, default is same as input)
    -R <bit/s>   Audio bitrate (ex: 64k, default 128k)
+   -v           Verbose output: use for debugging. Overrides -Q
 EOF
 }
 
 QUIET=0
+VERBOSE=0
 SHH=0
 LIST=0
 ABR="128k"
@@ -24,9 +28,14 @@ PASS=
 IN=
 OUT=
 QUAL="18"
-while getopts "f:hi:l:o:q:Qr:R:" optname
+INFILE=0
+NOENC=0
+while getopts "d:f:hi:I:no:q:Qr:R:v" optname
   do
     case "$optname" in
+      "v")
+        VERBOSE=1
+        ;;
       "Q")
         QUIET=1
         ;;
@@ -39,19 +48,27 @@ while getopts "f:hi:l:o:q:Qr:R:" optname
       "R")
         ABR=$OPTARG
         ;;
-      "l")
+      "d")
         LIST=1
         IN=$OPTARG
         SHH=1
         ;;
       "i")
         IN=$OPTARG
+        INFILE=0
+        ;;
+      "I")
+        IN=$OPTARG
+        INFILE=1
         ;;
       "o")
         OUT=$OPTARG
         ;;
       "f")
         PASS=$OPTARG
+        ;;
+      "n")
+        NOENC=1
         ;;
       "h")
         usage
@@ -91,7 +108,7 @@ fi
 
 # check ext if we're not listing
 #################################
-if [[ "$LIST" == "0" ]]; then
+if [[ "$LIST" == "0" && "$NOENC" == "0" ]]; then
     EXT=`echo $OUT | awk -F . {'print $NF'}`
     ffmpeg -y /tmp/test.$EXT 2>&1 | grep "Unable to find">/dev/null
     if [[ "$?" != "1" ]]; then
@@ -102,37 +119,39 @@ if [[ "$LIST" == "0" ]]; then
     fi
 fi
 
-
 # get youtube page (html)
 ##########################
-if [[ "$QUIET" == "1" ]] || [[ "$SHH" == "1" ]]; then
-    curl --user-agent "$UA" -o ytout "$IN" >/dev/null 2>&1
-else
-    echo "Get Page..."
-    curl --user-agent "$UA" -o ytout "$IN"
-fi
+if [[ "$INFILE" == "0" ]]; then
+    if [[ "$QUIET" == "0" ]]; then
+        echo "Get Page..."
+    fi
+    if [[ "$VERBOSE" == "0" ]] || [[ "$SHH" == "1" ]]; then
+        curl --user-agent "$UA" -o ytout "$IN" >/dev/null 2>&1
+    else
+        curl --user-agent "$UA" -o ytout "$IN"
+    fi
+    if [[ "$?" != "0" ]]; then
+        echo "page wget failed"
+        exit 1
+    fi
 
-if [[ "$?" != "0" ]]; then
-    echo "page wget failed"
-    exit 1
-fi
-
-
-# get the formats
-##################
+# get video info
+#################
 FMTS=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g' | grep fmt_url | sed 's/,/\n/g' | sed 's/fmt_url_map=//g'`
+NAME=`cat ytout | grep "og:title" | grep -Poo "content=\".*?\"" | sed 's/^content="//;s/"$//'`
+FNAME=`echo $NAME | sed 's/ /_/g' | sed "s/'/\\'/" | sed 's/_-_/-/g' | sed 's/"/\"/g' | sed 's/;//'`
+DUR=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g'| grep "^length_seconds"|sed 's/[\D]//g' | sed "s/[^0-9]//g"`
 
-
-# list formats (if selected)
+# list info (if selected)
 #############################
 if [[ "$LIST" == "1" ]]; then
     if [[ "$QUIET" == "0" ]]; then
-        echo -en "Available fomat codes for $IN:\n   "
+        echo -en "Video info for $IN:\n  Formats: "
     fi
     for i in `echo "$FMTS"`; do
         echo -en "`echo $i | cut -d'|' -f1` "
     done
-    echo ""
+    echo -en "\n  Name: $NAME\n  Clean Name: $FNAME\n  Duration: $DUR\n"
     exit 0;
 fi
 
@@ -159,12 +178,24 @@ if [[ "$URL" == "" ]]; then
 fi
 
 
+# output video info
+####################
+if [[ "$QUIET" == "0" ]]; then
+    echo "URL: $IN"
+    echo "FMT: $QUAL"
+    echo "NAME: $NAME"
+    echo "FILE: $OUT"
+fi
+
+
 # get media file
 #################
-if [[ "$QUIET" == "1" ]]; then
+if [[ "$QUIET" == "0" ]]; then
+    echo "Get Video..."
+fi
+if [[ "$VERBOSE" == "0" ]]; then
     curl --user-agent "$UA" -o ytout.media -L "$URL" >/dev/null 2>&1
 else
-    echo "Get Video..."
     curl --user-agent "$UA" -o ytout.media -L "$URL"
 fi
 
@@ -174,22 +205,35 @@ if [[ "$?" != "0" ]]; then
     exit 2
 fi
 
+fi #end if-infile=0
 
 # encode
 #########
-if [[ "$VBR" == "sameq" ]];then
-    VBR="-$VBR"
+if [[ "$NOENC" == "0" ]];then
+    if [[ "$INFILE" == "0" ]];then
+        FILE='ytout.media'
+    else
+        FILE=$IN
+    fi
+    if [[ "$VBR" == "sameq" ]];then
+        VBR="-$VBR"
+    else
+        VBR="-b $VBR"
+    fi
+    if [[ "$QUIET" == "0" ]]; then
+        echo "Encode..."
+    fi
+    if [[ "$VERBOSE" == "0" ]]; then
+        ffmpeg -y -ab $ABR $VBR $PASS -i $FILE $OUT >/dev/null 2>&1
+    else
+        ffmpeg -y -ab $ABR $VBR $PASS -i $FILE $OUT
+    fi
+    if [[ "$QUIET" == "0" ]]; then
+        echo "Done!"
+    fi
 else
-    VBR="-b $VBR"
+    cp -f ytout.media $OUT
 fi
-if [[ "$QUIET" == "1" ]]; then
-    ffmpeg -y -ab $ABR $VBR $PASS -i ytout.media $OUT >/dev/null 2>&1
-else
-    echo "Encode..."
-    ffmpeg -y -ab $ABR $VBR $PASS -i ytout.media $OUT
-    echo "Done!"
-fi
-
 # cleanup
 ##########
-rm ytout ytout.media
+rm ytout ytout.media 2>/dev/null

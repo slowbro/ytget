@@ -17,16 +17,18 @@ Requirements
 
 Arguments
 ----------
+-d "<url>"  : display information about <url>
 -f "<args>" : pass args directly to ffmpeg
 -h          : help
 -i "<url>"  : input link. use whole link IN QUOTES (eg "http://www.youtube.com/watch?v=U7mPqycQ0tQ" [gee gee gee gee baby baby baby])
--l "<url>"  : list qualities available for <url>
+-I "<path>" : input file
+-n          : don't encode: output raw youtube video
 -o <file>   : output file. extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi .wmv .oog etc...)
 -q <num>    : quality number. default is 18 (360p)
 -Q          : be quiet (no output except for errors)
 -r <bit/s>  : pass video bitrate to ffmpeg (ex: 600k, 1200k [defL 96k])
 -R <bit/s>  : pass audio bitrate to ffmpeg (ex: 64k, 128k [def: 96k])
-
+-v          : verbose output: use for debugging. overrides -Q
 Examples
 ---------
 - Get quality 34 ("high quality"/480p) audio
@@ -35,8 +37,8 @@ Examples
 - Get quality 5 ("low quality"/240p) video, and suppress output
     ./ytget -o /path/to/some_video.avi -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q5 -Q
 
-- List qualities available
-    ./ytget -l "http://www.youtube.com/watch?v=U7mPqycQ0tQ"
+- List detauls about a video
+    ./ytget -d "http://www.youtube.com/watch?v=U7mPqycQ0tQ"
 
 Return Codes
 -------------
