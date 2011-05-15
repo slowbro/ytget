@@ -126,9 +126,9 @@ if [[ "$INFILE" == "0" ]]; then
         echo "Get Page..."
     fi
     if [[ "$VERBOSE" == "0" ]] || [[ "$SHH" == "1" ]]; then
-        curl --user-agent "$UA" -o ytout "$IN" >/dev/null 2>&1
+        curl --user-agent "$UA" -L -o ytout "$IN" >/dev/null 2>&1
     else
-        curl --user-agent "$UA" -o ytout "$IN"
+        curl --user-agent "$UA" -L -o ytout "$IN"
     fi
     if [[ "$?" != "0" ]]; then
         echo "page wget failed"
