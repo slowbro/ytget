@@ -147,7 +147,7 @@ urldecode(){
   echo -e "$(sed 'y/+/ /; s/%/\\x/g')"
 }
 if [[ "$FMTS" == "" ]];then
-FMTS=`for i in \`cat ytout | grep flashvars | grep url_encoded_fmt_stream_map | sed 's/.*flashvars=\"//' | cut -d'"' -f1 | urldecode | sed -e 's/.*url_encoded_fmt_stream_map=//' | sed -e 's/&amp;watermark.*//' | sed 's/,/\n/g'\`; do fmtcode_z=\`echo $i | sed -e 's/.*itag=//g'\`;echo -n $fmtcode_z\|;echo $i | sed 's/url=//'; done`
+FMTS=`for i in \`cat ytout | grep flashvars | grep url_encoded_fmt_stream_map | sed 's/.*flashvars=\"//' | cut -d'"' -f1 | urldecode | sed -e 's/.*url_encoded_fmt_stream_map=//' | sed -e 's/&amp;.*//' | sed 's/,/\n/g'\`; do fmtcode_z=\`echo $i | sed -e 's/.*itag=//g'\`;echo -n $fmtcode_z\|;echo $i | sed 's/url=//'; done`
 fi
 
 # list info (if selected)
