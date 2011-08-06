@@ -94,7 +94,6 @@ while getopts "d:f:hi:I:no:q:Qr:R:v" optname
 
 UA="'Mozilla/5.0 (X11; Linux x86_64; rv:2.2a1pre) Gecko/20110324 Firefox/4.2a1pre'"
 
-
 # check input
 ##############
 if [[ -z "$OUT" ]] || [[ -z "$IN" ]]; then
@@ -142,6 +141,15 @@ NAME=`cat ytout | grep "og:title" | grep -Poo "content=\".*?\"" | sed 's/^conten
 FNAME=`echo $NAME | sed 's/ /_/g' | sed "s/'/\\'/" | sed 's/_-_/-/g' | sed 's/"/\"/g'`
 DUR=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g'| grep "^length_seconds"|sed 's/[\D]//g' | sed "s/[^0-9]//g"`
 
+# new yt fmt map catch
+#######################
+urldecode(){
+  echo -e "$(sed 'y/+/ /; s/%/\\x/g')"
+}
+if [[ "$FMTS" == "" ]];then
+FMTS=`for i in \`cat ytout | grep flashvars | grep url_encoded_fmt_stream_map | sed 's/.*flashvars=\"//' | cut -d'"' -f1 | urldecode | sed -e 's/.*url_encoded_fmt_stream_map=//' | sed -e 's/&amp;watermark.*//' | sed 's/,/\n/g'\`; do fmtcode_z=\`echo $i | sed -e 's/.*itag=//g'\`;echo -n $fmtcode_z\|;echo $i | sed 's/url=//'; done`
+fi
+
 # list info (if selected)
 #############################
 if [[ "$LIST" == "1" ]]; then
@@ -158,7 +166,8 @@ fi
 
 # get url
 ##########
-URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2`
+URL=`echo "$FMTS"| grep "^$QUAL"| cut -d'|' -f2|sed 's/%3A/:/'|sed 's/%2F/\//g'|sed 's/%3F/?/'|sed 's/%3D/=/g'|sed 's/%26/\&/g'|sed 's/%25/%/g'|sed 's/&qual.*//g'`
+
 if [[ "$URL" == "" ]]; then
     #fall back to 18
     if [[ "$QUIET" == "0" ]]; then
