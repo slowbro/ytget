@@ -12,6 +12,7 @@
 Requirements
 -------------
 - bash shell (or similar)
+- curl
 - a Youtube Link
 - ffmpeg
 

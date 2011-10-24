@@ -130,7 +130,7 @@ if [[ "$INFILE" == "0" ]]; then
         curl --user-agent "$UA" -L -o ytout "$IN"
     fi
     if [[ "$?" != "0" ]]; then
-        echo "page wget failed"
+        echo "page curl failed"
         exit 1
     fi
 
@@ -209,7 +209,7 @@ else
 fi
 
 if [[ "$?" != "0" ]]; then
-    echo "video wget failed"
+    echo "video curl failed"
     rm ytout
     exit 2
 fi
