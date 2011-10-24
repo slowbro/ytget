@@ -15,6 +15,7 @@ Requirements
 - curl
 - a Youtube Link
 - ffmpeg
+ * recommended at least libfaac, mpeg-4, and libmp3lame. faac and mpeg-4 is required for most of the videos
 
 Arguments
 ----------
