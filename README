@@ -27,7 +27,7 @@ Arguments
 -o <file>   : output file. extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi .wmv .oog etc...)
 -q <num>    : quality number. default is 18 (360p)
 -Q          : be quiet (no output except for errors)
--r <bit/s>  : pass video bitrate to ffmpeg (ex: 600k, 1200k [defL 96k])
+-r <bit/s>  : pass video bitrate to ffmpeg (ex: 600k, 1200k [def: 96k])
 -R <bit/s>  : pass audio bitrate to ffmpeg (ex: 64k, 128k [def: 96k])
 -v          : verbose output: use for debugging. overrides -Q
 Examples
