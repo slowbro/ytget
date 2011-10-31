@@ -10,13 +10,18 @@ usage: $0 <diIo> [fhnqQrR]
    -I <path>    Input file
    -n           Don't encode: just output the raw youtube video
    -o <file>    Output file
+   -p <pass>    Youtube password (for age restricted videos)
    -q <num>     Set quality #
    -Q           Be silent
    -r <bit/s>   Video bitrate (ex: 1200k, default is same as input)
    -R <bit/s>   Audio bitrate (ex: 64k, default 128k)
+   -u <user>    Youtube username (for age restricted videos)
    -v           Verbose output: use for debugging. Overrides -Q
 EOF
 }
+
+LOGIN_URL="https://accounts.google.com/ServiceLoginAuth"
+AGE_URL="http://www.youtube.com/verify_age?next_url=/&gl=US&hl=en"
 
 QUIET=0
 VERBOSE=0
@@ -30,11 +35,38 @@ OUT=
 QUAL="18"
 INFILE=0
 NOENC=0
-while getopts "d:f:hi:I:no:q:Qr:R:v" optname
+USERNAME=""
+PASSWORD=""
+while getopts "d:f:hi:I:no:p:q:Qr:R:u:v" optname
   do
     case "$optname" in
       "v")
         VERBOSE=1
+        ;;
+      "d")
+        LIST=1
+        IN=$OPTARG
+        SHH=1
+        ;;
+      "f")
+        PASS=$OPTARG
+        ;;
+      "i")
+        IN=$OPTARG
+        INFILE=0
+        ;;
+      "I")
+        IN=$OPTARG
+        INFILE=1
+        ;;
+      "n")
+        NOENC=1
+        ;;
+      "o")
+        OUT=$OPTARG
+        ;;
+      "p")
+        PASSWORD=$OPTARG
         ;;
       "Q")
         QUIET=1
@@ -48,27 +80,8 @@ while getopts "d:f:hi:I:no:q:Qr:R:v" optname
       "R")
         ABR=$OPTARG
         ;;
-      "d")
-        LIST=1
-        IN=$OPTARG
-        SHH=1
-        ;;
-      "i")
-        IN=$OPTARG
-        INFILE=0
-        ;;
-      "I")
-        IN=$OPTARG
-        INFILE=1
-        ;;
-      "o")
-        OUT=$OPTARG
-        ;;
-      "f")
-        PASS=$OPTARG
-        ;;
-      "n")
-        NOENC=1
+      "u")
+        USERNAME=$OPTARG
         ;;
       "h")
         usage
@@ -104,6 +117,18 @@ if [[ -z "$OUT" ]] || [[ -z "$IN" ]]; then
     fi
 fi
 
+# check user/pass
+##################
+if [[ ("$USERNAME" != "" && "$PASSWORD" == "") || ("$USERNAME" == "" && "$PASSWORD" != "") ]];then
+    echo "Missing either username or password. Both are required, or none at all."
+    exit 6
+else
+    if [[ "$USERNAME" != "" ]];then
+        LOGIN=1
+    else
+        LOGIN=0
+    fi
+fi
 
 # check ext if we're not listing
 #################################
@@ -111,10 +136,30 @@ if [[ "$LIST" == "0" && "$NOENC" == "0" ]]; then
     EXT=`echo $OUT | awk -F . {'print $NF'}`
     ffmpeg -y /tmp/test.$EXT 2>&1 | grep "Unable to find">/dev/null
     if [[ "$?" != "1" ]]; then
-        echo "ffmpeg error: encoding to $EXT not supported"
+        echo "ffmpeg error: encoding to $EXT not supported."
         exit 5
     else
         rm /tmp/test.$EXT
+    fi
+fi
+
+# login to youtube via google
+##############################
+if [[ "$LOGIN" == "1" ]];then
+    echo "Logging in..."
+    login_page=`curl --user-agent "$UA" -c cookies.txt -L $LOGIN_URL 2>/dev/null`
+    # get form data
+    form_dsh=`echo $login_page | sed 's/^.*dsh//' | cut -d'>' -f1 | sed 's/value=//' |tr -d ' ' | tr -d '"'`
+    form_GALX=`echo $login_page | sed 's/^.*GALX//' | cut -d'>' -f1 | sed 's/value=//' |tr -d ' ' | tr -d '"'`
+    post_login_page=`curl --user-agent "$UA" -b cookies.txt -c cookies.txt -L -d "continue=http://www.youtube.com/signin?action_handle_signin=true&nomobiletemp=1&hl=en_US&next=%2F" -d "dsh=$form_dsh" -d "service=youtube" -d "dnConn=https://accounts.youtube.com" -d "GALX=$form_GALX" -d "Email=$USERNAME" -d "Passwd=$PASSWORD" $LOGIN_URL 2>/dev/null`
+    go_url=`echo -e $(echo $post_login_page | sed 's/^.*replace(\"//' | sed 's/").*//')`
+    if [[ "$go_url" =~ "^http://" ]];then
+        confirm_page=`curl --user-agent "$UA" -b cookies.txt -c cookies.txt -L "$go_url" 2>/dev/null`
+        curl --user-agent "$UA" -b cookies.txt -c cookies.txt -L -d "next_url=$URL" -d "set_racy=true" "http://www.youtube.com/verify_age?action_confirm=true" >/dev/null 2>&1
+    else
+        echo "Login failed."
+        rm cookies.txt 2>/dev/null
+        exit 6
     fi
 fi
 
@@ -125,9 +170,9 @@ if [[ "$INFILE" == "0" ]]; then
         echo "Get Page..."
     fi
     if [[ "$VERBOSE" == "0" ]] || [[ "$SHH" == "1" ]]; then
-        curl --user-agent "$UA" -L -o ytout "$IN" >/dev/null 2>&1
+        ytout=`curl --user-agent "$UA" -b cookies.txt -c cookies.txt -L "$IN" 2>/dev/null`
     else
-        curl --user-agent "$UA" -L -o ytout "$IN"
+        ytout=`curl --user-agent "$UA" -b cookies.txt -c cookies.txt -L "$IN"`
     fi
     if [[ "$?" != "0" ]]; then
         echo "page curl failed"
@@ -136,10 +181,10 @@ if [[ "$INFILE" == "0" ]]; then
 
 # get video info
 #################
-FMTS=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g' | grep fmt_url | sed 's/,/\n/g' | sed 's/fmt_url_map=//g'`
-NAME=`cat ytout | grep "og:title" | grep -Poo "content=\".*?\"" | sed 's/^content="//;s/"$//'`
+FMTS=`echo "$ytout" | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g' | grep fmt_url | sed 's/,/\n/g' | sed 's/fmt_url_map=//g'`
+NAME=`echo "$ytout" | grep "og:title" | grep -Poo "content=\".*?\"" | sed 's/^content="//;s/"$//'`
 FNAME=`echo $NAME | sed 's/ /_/g' | sed "s/'/\\'/" | sed 's/_-_/-/g' | sed 's/"/\"/g'`
-DUR=`cat ytout | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g'| grep "^length_seconds"|sed 's/[\D]//g' | sed "s/[^0-9]//g"`
+DUR=`echo "$ytout" | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g'| grep "^length_seconds"|sed 's/[\D]//g' | sed "s/[^0-9]//g"`
 
 # new yt fmt map catch
 #######################
@@ -147,7 +192,7 @@ urldecode(){
   echo -e "$(sed 'y/+/ /; s/%/\\x/g')"
 }
 if [[ "$FMTS" == "" ]];then
-FMTS=`for i in \`cat ytout | grep flashvars | grep url_encoded_fmt_stream_map | sed 's/.*flashvars=\"//' | cut -d'"' -f1 | urldecode | sed -e 's/.*url_encoded_fmt_stream_map=//' | sed -e 's/&amp;.*//' | sed 's/,/\n/g'\`; do fmtcode_z=\`echo $i | sed -e 's/.*itag=//g'\`;echo -n $fmtcode_z\|;echo $i | sed 's/url=//'; done`
+FMTS=`for i in \`echo "$ytout" | grep flashvars | grep url_encoded_fmt_stream_map | sed 's/.*flashvars=\"//' | cut -d'"' -f1 | urldecode | sed -e 's/.*url_encoded_fmt_stream_map=//' | sed -e 's/&amp;.*//' | sed 's/,/\n/g'\`; do fmtcode_z=\`echo $i | sed -e 's/.*itag=//g'\`;echo -n $fmtcode_z\|;echo $i | sed 's/url=//'; done`
 fi
 
 # list info (if selected)
@@ -157,9 +202,13 @@ if [[ "$LIST" == "1" ]]; then
         echo -en "Video info for $IN:\n  Formats: "
     fi
     for i in `echo "$FMTS"`; do
-        echo -en "`echo $i | cut -d'|' -f1` "
+        i=`echo $i| cut -d'|' -f1`;
+        if [[ "$i" =~ "^[0-9]+$" ]];then
+            echo -en "$i "
+        fi
     done
     echo -en "\n  Name: $NAME\n  Clean Name: $FNAME\n  Duration: $DUR\n"
+    rm cookies.txt 2>/dev/null
     exit 0;
 fi
 
@@ -203,14 +252,14 @@ if [[ "$QUIET" == "0" ]]; then
     echo "Get Video..."
 fi
 if [[ "$VERBOSE" == "0" ]]; then
-    curl --user-agent "$UA" -o ytout.media -L "$URL" >/dev/null 2>&1
+    curl --user-agent "$UA" -b cookies.txt -c cookies.txt -o ytout.media -L "$URL" >/dev/null 2>&1
 else
-    curl --user-agent "$UA" -o ytout.media -L "$URL"
+    curl --user-agent "$UA" -b cookies.txt -c cookies.txt -o ytout.media -L "$URL"
 fi
 
 if [[ "$?" != "0" ]]; then
     echo "video curl failed"
-    rm ytout
+    rm cookies.txt 2>/dev/null
     exit 2
 fi
 
@@ -245,5 +294,5 @@ else
 fi
 # cleanup
 ##########
-rm ytout ytout.media 2>/dev/null
+rm cookies.txt ytout.media 2>/dev/null
 exit 0

@@ -26,11 +26,14 @@ Arguments
 -I "<path>" : input file
 -n          : don't encode: output raw youtube video
 -o <file>   : output file. extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi .wmv .oog etc...)
+-p <pass>   : youtube password (for age-restricted videos)
 -q <num>    : quality number. default is 18 (360p)
 -Q          : be quiet (no output except for errors)
 -r <bit/s>  : pass video bitrate to ffmpeg (ex: 600k, 1200k [def: 96k])
 -R <bit/s>  : pass audio bitrate to ffmpeg (ex: 64k, 128k [def: 96k])
+-u <user>   : youtube username (for age-restricted videos)
 -v          : verbose output: use for debugging. overrides -Q
+
 Examples
 ---------
 - Get quality 34 ("high quality"/480p) audio
@@ -39,8 +42,11 @@ Examples
 - Get quality 5 ("low quality"/240p) video, and suppress output
     ./ytget -o /path/to/some_video.avi -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q5 -Q
 
-- List detauls about a video
+- List details about a video
     ./ytget -d "http://www.youtube.com/watch?v=U7mPqycQ0tQ"
+
+- Login and download an age-restricted video
+    ./ytget -i "http://youtube.com/watch?v=m6VojYGrnpg" -u"someuser@gmail.com" -p"mypassword" -o "somefile.mp3"
 
 Return Codes
 -------------
@@ -50,3 +56,4 @@ Return Codes
 3 : ffmpeg encode failed
 4 : argument error
 5 : ffmpeg codec error (codec not available)
+6 : youtube login fail or missing user/pass
