@@ -22,7 +22,7 @@ Arguments
 -d "<url>"  : display information about <url>
 -f "<args>" : pass args directly to ffmpeg
 -h          : help
--i "<url>"  : input link. use whole link IN QUOTES (eg "http://www.youtube.com/watch?v=U7mPqycQ0tQ" [gee gee gee gee baby baby baby])
+-i "<url>"  : input link. use whole link IN QUOTES (eg "http://www.youtube.com/watch?v=U7mPqycQ0tQ " [gee gee gee gee baby baby baby])
 -I "<path>" : input file
 -n          : don't encode: output raw youtube video
 -o <file>   : output file. extention decides format. (uses ffmpeg. usual extentions: .aac .mp3 .mpg .mp4 .avi .wmv .oog etc...)
@@ -37,16 +37,16 @@ Arguments
 Examples
 ---------
 - Get quality 34 ("high quality"/480p) audio
-    ./ytget -o some_audio.mp3 -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q34
+    ./ytget -o some_audio.mp3 -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ " -q34
 
 - Get quality 5 ("low quality"/240p) video, and suppress output
-    ./ytget -o /path/to/some_video.avi -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ" -q5 -Q
+    ./ytget -o /path/to/some_video.avi -i "http://www.youtube.com/watch?v=U7mPqycQ0tQ " -q5 -Q
 
 - List details about a video
-    ./ytget -d "http://www.youtube.com/watch?v=U7mPqycQ0tQ"
+    ./ytget -d "http://www.youtube.com/watch?v=U7mPqycQ0tQ "
 
 - Login and download an age-restricted video
-    ./ytget -i "http://youtube.com/watch?v=m6VojYGrnpg" -u"someuser@gmail.com" -p"mypassword" -o "somefile.mp3"
+    ./ytget -i "http://youtube.com/watch?v=m6VojYGrnpg " -u"someuser@gmail.com" -p"mypassword" -o "somefile.mp3"
 
 Return Codes
 -------------
