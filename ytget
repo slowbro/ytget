@@ -179,21 +179,22 @@ if [[ "$INFILE" == "0" ]]; then
         exit 1
     fi
 
+echo "$ytout" > ytout.txt
 # get video info
 #################
-FMTS=`echo "$ytout" | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g' | grep fmt_url | sed 's/,/\n/g' | sed 's/fmt_url_map=//g'`
-NAME=`echo "$ytout" | grep "og:title" | grep -Poo "content=\".*?\"" | sed 's/^content="//;s/"$//'`
-FNAME=`echo $NAME | sed 's/ /_/g' | sed "s/'/\\'/" | sed 's/_-_/-/g' | sed 's/"/\"/g'`
-DUR=`echo "$ytout" | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g'| grep "^length_seconds"|sed 's/[\D]//g' | sed "s/[^0-9]//g"`
-
-# new yt fmt map catch
-#######################
 urldecode(){
   echo -e "$(sed 'y/+/ /; s/%/\\x/g')"
 }
-if [[ "$FMTS" == "" ]];then
-FMTS=`for i in \`echo "$ytout" | grep flashvars | grep url_encoded_fmt_stream_map | sed 's/.*flashvars=\"//' | cut -d'"' -f1 | urldecode | sed -e 's/.*url_encoded_fmt_stream_map=//' | sed -e 's/&amp;.*//' | sed 's/,/\n/g'\`; do fmtcode_z=\`echo $i | sed -e 's/.*itag=//g'\`;echo -n $fmtcode_z\|;echo $i | sed 's/url=//'; done`
-fi
+
+FMTS=`echo "$ytout" | grep "swf =" | sed 's/;/;\n/g' | grep url_encoded_fmt_stream_map | urldecode | sed 's/,url=/\nurl=/g' | sed -e 's/\\\u0026amp;//g' | sed 's/url_encoded_fmt_stream_map=//' | sed -e 's/^url=//g'`
+NAME=`echo "$ytout" | grep "og:title" | grep -Poo "content=\".*?\"" | sed 's/^content="//;s/"$//'`
+FNAME=`echo $NAME | sed 's/ /_/g' | sed "s/'/\\'/" | sed 's/_-_/-/g' | sed 's/"/\"/g'`
+#DUR=`echo "$ytout" | grep "video_id=" | sed -e's/%\([0-9A-F][0-9A-F]\)/\\\\\x\1/g' | xargs echo -e | sed 's/;/;\n/g'| grep "^length_seconds"|sed 's/[\D]//g' | sed "s/[^0-9]//g"`
+FMTS=`for i in \`echo "$FMTS"\`;do
+    fmtcode_z=\`echo $i | sed -e 's/.*itag=//g'\`
+    echo -n $fmtcode_z\|
+    echo $i | sed 's/url=//'
+ done`
 
 # list info (if selected)
 #############################
